@@ -1,0 +1,241 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "Vpc with a ec2 instance",
+        "Parameters": {
+            "KeyName" : {
+                "Description" : "Key pair to allow SSH access to the instance",
+                "Type" : "AWS::EC2::KeyPair::KeyName",
+                "ConstraintDescription" : "Must be the name of an existing EC2 KeyPair."
+              },
+
+            "InstanceType":
+            {
+                "Type": "String",
+                "AllowedValues": ["t2.micro", "t2.nano"],
+                "Default" :"t2.micro",
+                "Description":"Enter Type"
+            },
+            "cidrblock":{
+                "Type":"String",
+                "Default":"10.0.0.0/16",
+                "MinLength":"8",
+                "MaxLength":"14",
+                "AllowedPattern":"(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+                "ConstraintDescription":"must be a valid address"
+            },
+            "availabilityZone":{
+                "Type":"AWS::EC2::AvailabilityZone::Name",
+                "Default":""
+                
+            },
+
+
+
+            "instanceName":{
+                "Type": "String",
+                "Default":"test",
+                "Description":"Enter the Instance Name"
+                
+            }
+    
+        },
+    
+        "Resources": {
+           
+            "vpc":{
+                    "Type": "AWS::EC2::VPC",
+                    "Properties": {
+                        "EnableDnsSupport": true,
+                        "EnableDnsHostnames": true,
+                        "InstanceTenancy": "default",
+                        "CidrBlock": {"Ref":"cidrblock"},
+                        "Tags": [
+                          {
+                          "Key": "Name",
+                          "Value": "VpcMade"
+                          }
+                      ]
+                    }
+            }, 
+    
+            "sub": {
+              "Type": "AWS::EC2::Subnet",
+             "Properties": {
+            "MapPublicIpOnLaunch":"true",
+            "AvailabilityZone":{"Ref":"availabilityZone"},
+            "VpcId": {"Ref":"vpc"},
+            "CidrBlock": "10.0.0.0/24",
+                  "Tags": [
+                          {
+                          "Key": "Name",
+                          "Value": "subnetMade"
+                          }
+                      ]
+                    }  
+            },
+                 
+                 "routeTable": {
+                   "Type": "AWS::EC2::RouteTable",
+                   "Properties": {
+                     "VpcId": {"Ref":"vpc"},
+                     "Tags": [{
+                         "Key": "Name",
+                         "Value":"routeTabelMade"
+                     }]
+                   }
+                 },
+                 
+
+                 "Route" : {
+                    "Type" : "AWS::EC2::Route",
+                    "DependsOn": "igw",
+                    "Properties" : {
+                       "RouteTableId" : { "Ref" : "routeTable" },
+                       "DestinationCidrBlock" : "0.0.0.0/0",
+                       "GatewayId" : { "Ref" : "igw" }
+                    }
+                 },
+                 
+                 "SubnetARouteTableAssociation": {
+                    "Type": "AWS::EC2::SubnetRouteTableAssociation",
+                    "Properties": {
+                        "RouteTableId": {
+                            "Ref": "routeTable"
+                        },
+                        "SubnetId": {
+                            "Ref": "sub"
+                        }
+                    }
+                },
+
+                 "igw": {
+                   "Type": "AWS::EC2::InternetGateway",
+                   "Properties": {
+                     "Tags": [{
+                         "Key":"Name",
+                         "Value":"internetGateway"
+                     }]
+                   }
+                 },
+
+                 "AttachGateway" : {
+                    "Type" : "AWS::EC2::VPCGatewayAttachment",
+                    "Properties" : {
+                       "VpcId" : { "Ref" : "vpc" },
+                       "InternetGatewayId" : { "Ref" : "igw" }
+                     }
+                 },
+
+                 "ssh" : {
+                   "Type" : "AWS::EC2::SecurityGroup",
+                   "Properties" : {
+                     "GroupDescription" : "traffic",
+                     "SecurityGroupIngress" : [ 
+                        {
+                            "IpProtocol": "tcp",
+                            "FromPort": "10933",
+                            "ToPort": "10933",
+                            "CidrIp": "20.188.245.156/32"
+                        },
+                        {
+                            "IpProtocol": "tcp",
+                            "FromPort": "10933",
+                            "ToPort": "10933",
+                            "CidrIp": "52.147.25.42/32"
+                        }
+                     ],
+                     "SecurityGroupEgress": [
+                        {
+                            "IpProtocol": -1,
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                
+                     "VpcId" : {"Ref":"vpc"}
+                    
+                 }
+                },
+                 
+                 "ElasticIP": {
+                    "Type": "AWS::EC2::EIP",
+                    "Properties": {
+                        "Domain": "vpc",
+                        "InstanceId": {
+                            "Ref": "myinstance"
+                        }
+                    }
+                },
+
+            "myinstance": {
+                "Type": "AWS::EC2::Instance",
+                "Properties": {
+                    "AvailabilityZone":{"Ref":"availabilityZone"},
+                    "SubnetId": { "Ref" : "sub" },
+                    "SecurityGroupIds": [
+                        {
+                            "Ref": "ssh"
+                        }
+                    ],
+                    "ImageId":  "ami-0e5182fad1edfaa68" ,
+                    "InstanceType": 
+                    {"Ref" :"InstanceType"},
+                    "KeyName":"cloudFormation",
+                    "UserData": {
+                        "Fn::Base64" : {
+                            "Fn::Join" : [ ",", [
+                                
+                                "Hello World" ] ]
+                        }
+                          
+                           
+                        
+                    },
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": {"Ref":"instanceName"}
+                        }
+                    ]
+                   
+                }
+        
+            }
+
+        },
+
+        "Outputs": {
+            "PublicIp": {
+                "Value": {
+                    "Fn::GetAtt": [
+                        "myinstance",
+                        "PublicIp"
+                    ]
+                },
+                "Description":"ip address"
+               
+            },
+            "url":{
+                "Description":"Web app",
+                "Value":{
+                    "Fn::Join":[
+                        "",
+                        [
+                            "http://",
+                            {
+                              "Fn::GetAtt":[
+                                "myinstance",
+                                "PublicDnsName"
+                              ]
+                            }
+                          ]
+                    ]
+                }
+            }
+        }
+
+   
+}
+    
+
+    
+    
