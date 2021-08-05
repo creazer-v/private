@@ -1,0 +1,47 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "just a instance",
+  
+    "Parameters": {
+    "InstanceName":{
+        "Type":"String",
+        "Description":"Name"
+    }
+    },
+
+    "Resources": {
+         
+        "name": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-0e5182fad1edfaa68",
+                "InstanceType": "t2.micro",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Ref":"InstanceName"
+                        }
+                    }
+                ]
+               
+                        
+                    }
+                }
+    },
+
+   "Outputs":{
+       "PublicIpAddress":{
+           "Description":"IP ADDRESS",
+           "Value":{
+               "Fn::GetAtt":[
+                    "name",
+                    "PublicIp"
+               ]
+               
+           }
+       }
+   }
+                
+}
+ 
