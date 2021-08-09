@@ -1,0 +1,45 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "code build",
+    "Parameters":{
+        "codebuildarn":{
+            "Description":"CodeBuild Arn",
+            "Type":"String",
+            "Default":"arn:aws:iam::121560732360:role/ap-southeast-1cbuildrole"
+        }
+    },
+    
+    "Resources": {
+        
+
+        "Project": {
+            "Type": "AWS::CodeBuild::Project",
+            "Properties": {
+              "Name": "linterx",
+              "Description": "A description about my project",
+              
+              "ServiceRole":{"Ref":"codebuildarn"},
+              "Artifacts": {
+                "Type": "NO_ARTIFACTS"
+              },
+              "Environment": {
+                "Type": "LINUX_CONTAINER",
+                "ComputeType": "BUILD_GENERAL1_SMALL",
+                "Image": "aws/codebuild/amazonlinux2-x86_64-standard:2.0"
+               
+              },
+              "Source": {
+                "Location": "https://git-codecommit.ap-southeast-1.amazonaws.com/v1/repos/test",
+                "Type": "CODECOMMIT"
+              },
+              "TimeoutInMinutes": 5,
+              "Tags": [
+                {
+                  "Key": "Name",
+                  "Value": "cfn-lint"
+                }
+              ]
+            }
+          }
+    }
+}

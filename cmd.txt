@@ -1,0 +1,3 @@
+aws cloudformation create-stack --stack-name pipeline --template-body file://codepipeline-new.json --parameter file://pipeparams.json
+
+

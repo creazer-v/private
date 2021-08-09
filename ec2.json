@@ -10,7 +10,7 @@
     },
 
     "Resources": {
-        
+         
         "name": {
             "Type": "AWS::EC2::Instance",
             "Properties": {

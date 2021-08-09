@@ -1,0 +1,67 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Two private S3 with one public s3",
+    "Parameters": {
+        "PublicS3Name": {
+            "Description": "Make sure the name is universal and unique",
+            "Type": "String",
+            "ConstraintDescription": "No special characters is allowed, should be minimum of 4 characters",
+            "Default": "public-4455",
+            "MinLength": "4"
+        }
+    },
+    "Resources": {
+        "PublicS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "AccessControl": "PublicReadWrite",
+                "BucketName": {
+                    "Ref": "PublicS3Name"
+                },
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {
+                            "ServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "AES256"
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                },
+                "Tags": [
+                    {
+                        "Key": "Type",
+                        "Value": "Public"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "PublicBucketName": {
+            "Description": "Name of the public S3 bucket",
+            "Value": {
+                "Ref": "PublicS3Bucket"
+            },
+            "URL": {
+                "Description": "Website URL",
+                "Value":{
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {
+                            "Fn::GetAtt": [
+                                "PublicS3Bucket",
+                                "WebsiteURL"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+        }
+    }
+}

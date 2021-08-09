@@ -1,0 +1,142 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Code pipeline with cloudformation",
+    "Parameters" : {
+
+        "RepoName":{
+            "Description":"Code commit Repository Name",
+            "Default":"test-codecommit",
+            "Type":"String"
+        },
+
+        "Branchname":{
+            "Description":"Branch Name of the Code Commit",
+            "Default":"main",
+            "Type":"String"
+        },
+
+        "S3ObjectKey":{
+            "Description":"Key of the zipped template file in S3",
+            "Default":"resources.zip",
+            "Type":"String"
+        },
+
+        "S3BucketName":{
+            "Description":"Name of S3 Bucket containing the template",
+            "Default":"pipeline-5",
+            "Type":"String"
+        },
+
+        "TemplateName":{
+            "Description":"Name of the cloudformation template to be selected",
+            "Default":"ec2.json",
+            "Type":"String"
+        },
+
+        "Parameter":{
+            "Description":"Name of the cloudformation parameter template to be selected",
+            "Default":"parameterec2.json",
+            "Type":"String"
+        },
+
+        "PipelineName":{
+            "Description":"Name of the code pipeline",
+            "Default":"basic",
+            "Type":"String"
+        },
+
+        "cfnrolearn":{
+            "Description":"enter the arn for cloudformation role",
+            "Type":"String"
+        },
+
+        "Pipelinerolearn":{
+            "Description":"enter the arn for pipeline role",
+            "Type":"String"
+        },
+
+        "Stackname":{
+            "Description":"Name of the cloudformation stack to be created",
+            "Default":"simple",
+            "Type":"String"
+        }
+    },
+    "Resources":{
+        "codecommitrepo":{
+            "Type" : "AWS::CodeCommit::Repository",
+            "Properties" : {
+                "RepositoryDescription" : "new repo",
+                "RepositoryName" : {"Ref":"RepoName"}
+              }
+          },
+
+
+        "DeploymentArtifactBucket":{
+            "Type":"AWS::S3::Bucket"
+
+        },
+
+        
+
+        "Pipeline":{
+            "Type" : "AWS::CodePipeline::Pipeline",
+            "Properties" : {
+                "ArtifactStore" : {
+                "Type":"S3",
+                "Location":{"Ref":"DeploymentArtifactBucket"}
+                },
+                "Name" : {"Ref":"PipelineName"},
+                
+                "RoleArn" : {"Ref":"Pipelinerolearn"},
+                "Stages" : [
+                    {
+                    "Name":"Source",
+                    "Actions":[{
+                        "Name" : "Source",
+                        "ActionTypeId":{
+                            "Category":"Source",
+                            "Owner":"AWS",
+                            "Version":"1",
+                            "Provider":"CodeCommit"
+                        },
+                        "OutputArtifacts":[{
+                            "Name":"TemplateSource"
+                        }],
+                        "RunOrder":1,
+                        "Configuration":{
+                            "RepositoryName":{"Fn::GetAtt": ["codecommitrepo","Name"]},
+                            "BranchName": {"Ref":"Branchname"}
+                        }
+                    }]
+                    },
+                    {
+                    "Name":"Deploy",
+                    "Actions":[{
+                        "Name":"CreateStack",
+                        "ActionTypeId":{
+                            "Category":"Deploy",
+                            "Owner":"AWS",
+                            "Version":"1",
+                            "Provider":"CloudFormation"
+                        },                        
+                        "InputArtifacts":[{
+                          "Name":"TemplateSource"
+                        }],
+                        "RunOrder":1,
+                        "Configuration":{
+                            "ActionMode":"CREATE_UPDATE",
+                            "RoleArn":{"Ref":"cfnrolearn"},
+                            "StackName":{"Ref":"Stackname"},
+                            "TemplatePath": {"Fn::Sub": "TemplateSource::${TemplateName}"},
+                            "TemplateConfiguration":{"Fn::Sub":"TemplateSource::${Parameter}"}
+                        }
+                    }]
+                    }
+                        
+                ]
+              }
+        }
+          
+    }
+
+}

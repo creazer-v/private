@@ -1,0 +1,240 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Code pipeline with cloudformation",
+    "Parameters" : {
+
+        "RepoName":{
+            "Description":"Code commit Repository Name",
+            "Default":"test-codecommit",
+            "Type":"String"
+        },
+
+        "codebuildarn":{
+            "Description":"CodeBuild Arn",
+            "Type":"String",
+            "Default":"arn:aws:iam::121560732360:role/ap-southeast-1cbuildrole"
+        },
+
+        "Branchname":{
+            "Description":"Branch Name of the Code Commit",
+            "Default":"main",
+            "Type":"String"
+        },
+
+        "CodeBuildName":{
+            "Description":"Name of the CodeBuild Project",
+            "Default":"linterx",
+            "Type":"String"
+        },
+
+
+        "TemplateName":{
+            "Description":"Name of the cloudformation template to be selected",
+            "Default":"ec2.json",
+            "Type":"String"
+        },
+
+        "Parameter":{
+            "Description":"Name of the cloudformation parameter template to be selected",
+            "Default":"parameterec2.json",
+            "Type":"String"
+        },
+
+        "PipelineName":{
+            "Description":"Name of the code pipeline",
+            "Default":"cfn-test-basic",
+            "Type":"String"
+        },
+
+        "cfnrolearn":{
+            "Description":"enter the arn for cloudformation role",
+            "Type":"String",
+            "Default":"arn:aws:iam::121560732360:role/ap-southeast-1cfnrole"
+        },
+
+        "Pipelinerolearn":{
+            "Description":"enter the arn for pipeline role",
+            "Type":"String",
+            "Default":"arn:aws:iam::121560732360:role/ap-southeast-1cplrole"
+        },
+
+        "snsname":{
+            "Type":"String",
+            "Default":"sns-approval"
+        },
+
+        "Stackname":{
+            "Description":"Name of the cloudformation stack to be created",
+            "Default":"simple",
+            "Type":"String"
+        }
+    },
+    "Resources":{
+        "codecommitrepo":{
+            "Type" : "AWS::CodeCommit::Repository",
+            "Properties" : {
+                "RepositoryDescription" : "new repo",
+                "RepositoryName" : {"Ref":"RepoName"}
+              }
+          },
+
+        "DeploymentArtifactBucket":{
+            "Type":"AWS::S3::Bucket"
+
+        },
+
+
+        "Project": {
+            "Type": "AWS::CodeBuild::Project",
+            "Properties": {
+              "Name": {"Ref":"CodeBuildName"},
+              "Description": "A description about my project",
+              
+              "ServiceRole":{"Ref":"codebuildarn"},
+              "Artifacts": {
+                "Type": "NO_ARTIFACTS"
+              },
+              "Environment": {
+                "Type": "LINUX_CONTAINER",
+                "ComputeType": "BUILD_GENERAL1_SMALL",
+                "Image": "aws/codebuild/amazonlinux2-x86_64-standard:2.0"
+               
+              },
+              "Source": {
+                "Location":{"Fn::Join": ["",["https://git-codecommit.ap-southeast-1.amazonaws.com/v1/repos/" , {"Ref": "RepoName"}]]},
+                "Type": "CODECOMMIT"
+              },
+              "TimeoutInMinutes": 5,
+              "Tags": [
+                {
+                  "Key": "Name",
+                  "Value": "cfn-lint"
+                }
+              ]
+            }
+        },
+    
+
+
+        "Sns":{
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "Subscription" : [{
+                    "Endpoint" : "mahendrax97@gmail.com",
+                    "Protocol" : "email"
+                  }],
+                "TopicName" :{"Ref":"snsname"}
+              }
+        },
+        
+        
+          
+        
+
+        "Pipeline":{
+            "Type" : "AWS::CodePipeline::Pipeline",
+            "Properties" : {
+                "ArtifactStore" : {
+                "Type":"S3",
+                "Location":{"Ref":"DeploymentArtifactBucket"}
+                },
+                "Name" : {"Ref":"PipelineName"},
+                "RoleArn" : {"Ref":"Pipelinerolearn"},
+                "Stages" : [
+                    {
+                    "Name":"Source",
+                    "Actions":[{
+                        "Name" : "Source",
+                        "ActionTypeId":{
+                            "Category":"Source",
+                            "Owner":"AWS",
+                            "Version":"1",
+                            "Provider":"CodeCommit"
+                        },
+                        "OutputArtifacts":[{
+                            "Name":"TemplateSource"
+                        }],
+                        "RunOrder":1,
+                        "Configuration":{
+                            "RepositoryName":{"Fn::GetAtt": ["codecommitrepo","Name"]},
+                            "BranchName": {"Ref":"Branchname"}
+                        }
+                    }]
+                    },
+
+                    {
+                        "Name":"codebuild",
+                        "Actions":[{
+                            "Name" : "Cfn-lint",
+                            "ActionTypeId":{
+                                "Category":"Build",
+                                "Owner":"AWS",
+                                "Version":"1",
+                                "Provider":"CodeBuild"
+                            },
+                            "InputArtifacts":[{
+                                "Name":"TemplateSource"
+                              }],
+                            "RunOrder":2,
+                            "Configuration": {
+                                "BatchEnabled": "true",
+                                "CombineArtifacts": "true",
+                                "ProjectName": {"Ref":"Project"},
+                                "PrimarySource": "MyApplicationSource1"
+                                 }
+                        }]
+                        },
+
+
+                    {
+                        "Name":"Production",
+                        "Actions":[{
+                            "Name":"status",
+                            "ActionTypeId":{
+                                "Category":"Approval",
+                                "Owner":"AWS",
+                                "Version":"1",
+                                "Provider":"Manual"
+                            },
+                            "RunOrder": 3,
+                            "Configuration": {
+                                "NotificationArn":"arn:aws:sns:ap-southeast-1:121560732360:sns-approval",
+                                "CustomData": "feedback"
+                            }
+
+                        }]
+                        },
+
+
+
+                    {
+                    "Name":"Deploy",
+                    "Actions":[{
+                        "Name":"CreateStack",
+                        "ActionTypeId":{
+                            "Category":"Deploy",
+                            "Owner":"AWS",
+                            "Version":"1",
+                            "Provider":"CloudFormation"
+                        },                        
+                        "InputArtifacts":[{
+                          "Name":"TemplateSource"
+                        }],
+                        "RunOrder":4,
+                        "Configuration":{
+                            "ActionMode":"CREATE_UPDATE",
+                            "RoleArn":{"Ref":"cfnrolearn"},
+                            "StackName":{"Ref":"Stackname"},
+                            "TemplatePath": {"Fn::Sub": "TemplateSource::${TemplateName}"},
+                            "TemplateConfiguration":{"Fn::Sub":"TemplateSource::${Parameter}"}
+                        }
+                    }]
+                    }
+                        
+                ]
+              }
+        }
+          
+    }
+
+}

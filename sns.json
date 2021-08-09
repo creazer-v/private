@@ -1,0 +1,36 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "SnS",
+
+    "Parameters": {
+        "snsname":{
+            "Type":"String",
+            "Default":"sns-approval"
+        }
+        
+    },
+    "Resources": {
+        
+     
+
+        "Sns":{
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "Subscription" : [{
+                    "Endpoint" : "mahendrax97@gmail.com",
+                    "Protocol" : "email"
+                  }],
+                "TopicName" :{"Ref":"snsname"}
+              }
+        }
+    },
+          
+    
+    "Outputs": {
+            "arn":{
+                "Value":{
+                    "Ref":"Sns"
+                }
+            }
+    }
+}

@@ -1,0 +1,174 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "IAM roles for Cloudformation and Pipeline",
+    
+    "Parameters": {
+        "CloudformationRole":{
+            "Type":"String",
+            "Default":"cfnrole",
+            "Description":"IAM role name for Cloudformation"
+        },
+
+        "CodepipelineRole":{
+                "Type":"String",
+                "Default":"cplrole",
+                "Description":"IAM role name for Codepipeline"
+        },
+
+        
+        "CodeBuildRole":{
+            "Type":"String",
+            "Default":"cbuildrole",
+            "Description":"IAM role name for Codepipeline"
+    }
+
+        
+    },
+    "Resources": {
+        "CfnRole":{
+            "Type":"AWS::IAM::Role",
+            "Properties":{
+                "RoleName":{"Fn::Join": ["", [{"Ref": "AWS::Region"}, {"Ref": "CloudformationRole"}]]},
+                "AssumeRolePolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["cloudformation.amazonaws.com"]
+                        },
+                        "Action": [ "sts:AssumeRole"]
+                    }
+                    ]
+                },
+                "Path":"/",
+                "Policies":[
+                    {
+                        "PolicyName": "cloudformation-root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": ["ec2:*","s3:*"],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+
+            }
+        },
+
+        "ServiceRole":{
+            "Type":"AWS::IAM::Role",
+            "Properties":{
+                "RoleName":{"Fn::Join": ["", [{"Ref": "AWS::Region"}, {"Ref": "CodeBuildRole"}]]},
+                
+                "AssumeRolePolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["codebuild.amazonaws.com"]
+                        },
+                        "Action": [ "sts:AssumeRole"]
+                    }
+                    ]
+                },
+                "Path":"/",
+                "Policies":[
+                    {
+                        "PolicyName": "CodePipeline-root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": ["s3:*","cloudformation:*","codecommit:*","sns:*","codebuild:*","iam:PassRole"],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+
+            }
+        },
+
+
+
+        "PipelineRole":{
+            "Type":"AWS::IAM::Role",
+            "Properties":{
+                "RoleName":{"Fn::Join": ["", [{"Ref": "AWS::Region"}, {"Ref": "CodepipelineRole"}]]},
+                "AssumeRolePolicyDocument":{
+                    "Version":"2012-10-17",
+                    "Statement":[
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["codepipeline.amazonaws.com"]
+                        },
+                        "Action": [ "sts:AssumeRole"]
+                    }
+                    ]
+                },
+                "Path":"/",
+                "Policies":[
+                    {
+                        "PolicyName": "CodePipeline-root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": ["s3:*","cloudformation:*","codecommit:*","sns:*","codebuild:*","iam:PassRole"],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+
+            }
+        }
+    },
+    "Outputs": {
+
+        "CloudformationArn":{
+            "Description":"Arn for Cloudformation",
+            "Value":{
+                "Fn::GetAtt":[
+                    "CfnRole",
+                    "Arn"
+                ]
+
+            }
+        },
+
+        "CodeBuildArn":{
+            "Description":"Arn for CodeBuild",
+            "Value":{
+                "Fn::GetAtt":[
+                    "ServiceRole",
+                    "Arn"
+                ]
+
+            }
+        },
+        "CodepipelinenArn":{
+            "Description":"Arn for CodePIpeline",
+            "Value":{
+                "Fn::GetAtt":[
+                    "PipelineRole",
+                    "Arn"
+                ]
+
+            }
+        }
+
+    }
+}

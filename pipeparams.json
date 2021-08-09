@@ -1,0 +1,11 @@
+[
+    {
+        "ParameterKey":"cfnrolearn",
+        "ParameterValue":"arn:aws:iam::121560732360:role/ap-southeast-1cfnrole"
+    },
+
+    {
+        "ParameterKey":"Pipelinerolearn",
+        "ParameterValue":"arn:aws:iam::121560732360:role/ap-southeast-1cplrole"
+    }
+]

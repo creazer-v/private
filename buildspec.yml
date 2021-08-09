@@ -1,0 +1,17 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+        Python: 2.7    
+    env:
+      variables:
+        Template_File: "ec2.json"
+    commands:
+    - pip3 install awscli --upgrade --quiet
+    - pip3 install cfn-lint --quiet              
+    
+    
+  build:
+    commands:
+    - cd ./
+    - cfn-lint $Template_File
